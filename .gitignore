@@ -41,8 +41,8 @@ test.webp
 .env
 .env.*
 
-# Internal working files, kept out of a public repo by default.
-# The app does not need either of them to run. Delete the matching line if you
-# actually do want it published.
+# Internal agent definitions, kept out of a public repo.
+# The app does not need them to run. Delete the line below if you
+# actually do want them published.
+# (prd.md used to be listed here - it is now published on purpose.)
 .claude/
-prd.md
