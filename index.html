@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Image to WhatsApp Video</title>
+  <meta name="description" content="Turn any photo into a silent 1080x1920 MP4 for WhatsApp Status. Runs entirely in your browser.">
+  <meta name="theme-color" content="#0f172a">
+  <!-- Inline icon so the browser does not request a missing favicon.ico -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%AC%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./style.css">
+
+  <!--
+    CDN dependency (the ONLY network requests this app makes).
+    Both of these are small (about 4 KB and 3 KB) and give us two globals:
+      @ffmpeg/ffmpeg -> window.FFmpegWASM  (the FFmpeg class)
+      @ffmpeg/util   -> window.FFmpegUtil  (fetchFile, toBlobURL)
+    They are deferred, so they never block first paint, and `defer` keeps them in
+    order ahead of ./script.js.
+    The big part - the 32 MB WebAssembly core - is NOT referenced here. ./script.js
+    downloads it lazily on the first "Create Video" click so the page loads fast.
+  -->
+  <script defer src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+  <script defer src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
+  <script defer src="./script.js"></script>
+</head>
+<body>
+  <main class="app">
+
+    <header class="head">
+      <h1>Image to WhatsApp Video</h1>
+      <p class="sub">Turn any photo into a silent WhatsApp Status video</p>
+    </header>
+
+    <!-- ---------- 1. Upload ---------- -->
+    <section class="card" aria-labelledby="uploadHeading">
+      <h2 id="uploadHeading" class="cardTitle">Upload Image</h2>
+
+      <!-- The real input lives outside the drop zone so that clicking the drop
+           zone cannot re-trigger the input's own click event. -->
+      <label class="srOnly" for="imageInput">Choose an image file (JPG, PNG or WEBP)</label>
+      <!-- tabindex="-1": the input is visually hidden, so it must not become an
+           invisible tab stop. #dropZone is the one focusable upload control, and
+           it clicks this input programmatically. -->
+      <input
+        id="imageInput"
+        class="srOnly"
+        type="file"
+        tabindex="-1"
+        accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp">
+
+      <div id="dropZone" class="dropZone" role="button" tabindex="0"
+           aria-label="Choose an image, or drag and drop one here">
+        <span class="dropIcon" aria-hidden="true">&#128247;</span>
+        <span class="dropMain">Choose Image</span>
+        <span class="dropHint">or drag &amp; drop it here</span>
+        <span class="dropTypes">JPG, PNG or WEBP &middot; up to 20 MB</span>
+      </div>
+
+      <img id="preview" class="preview" alt="Preview of the image you selected" hidden>
+      <p id="fileInfo" class="fileInfo" hidden></p>
+    </section>
+
+    <!-- ---------- 2. Settings ---------- -->
+    <section class="card" aria-labelledby="settingsHeading">
+      <h2 id="settingsHeading" class="cardTitle">Video Duration</h2>
+
+      <fieldset class="fieldset">
+        <legend class="srOnly">Video Duration</legend>
+        <div class="segmented">
+          <label class="segItem">
+            <input type="radio" name="duration" id="dur15" value="15">
+            <span>15 sec</span>
+          </label>
+          <label class="segItem">
+            <input type="radio" name="duration" id="dur30" value="30">
+            <span>30 sec</span>
+          </label>
+          <label class="segItem">
+            <input type="radio" name="duration" id="dur60" value="60" checked>
+            <span>60 sec</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <div class="optionRow">
+        <div class="option">
+          <label for="fitMode">Image fit</label>
+          <select id="fitMode">
+            <option value="fit" selected>Fit &ndash; show the whole photo</option>
+            <option value="cover">Cover &ndash; fill the screen (crops edges)</option>
+          </select>
+        </div>
+
+        <div class="option">
+          <label for="bgColor">Background colour</label>
+          <input type="color" id="bgColor" value="#000000">
+        </div>
+      </div>
+      <p class="optionNote">Background colour fills the empty area in <strong>Fit</strong> mode.</p>
+    </section>
+
+    <!-- ---------- 3. Create ---------- -->
+    <section class="card">
+      <button id="createBtn" class="btn btnPrimary" type="button" disabled>Create Video</button>
+      <p class="mobileNote">Video creation may take a little longer on mobile devices.</p>
+
+      <!-- Hidden until a render starts, so a first-time visitor is not shown an
+           unexplained empty progress track. -->
+      <div id="progressArea" class="progressWrap" aria-live="polite" hidden>
+        <progress id="progressBar" max="100" value="0"></progress>
+        <p id="progressText" class="progressText"></p>
+      </div>
+
+      <p id="errorBox" class="errorBox" role="alert" hidden></p>
+    </section>
+
+    <!-- ---------- 4. Result ---------- -->
+    <section class="card" aria-labelledby="resultHeading">
+      <h2 id="resultHeading" class="cardTitle">Your Video</h2>
+      <video id="result" class="result" controls playsinline hidden></video>
+      <dl id="resultMeta" class="meta" hidden>
+        <div><dt>Duration</dt><dd id="metaDuration">&ndash;</dd></div>
+        <div><dt>Resolution</dt><dd id="metaResolution">&ndash;</dd></div>
+        <div><dt>File size</dt><dd id="metaSize">&ndash;</dd></div>
+      </dl>
+      <a id="downloadBtn" class="btn btnDownload" download="whatsapp-status-60s.mp4" hidden>Download MP4</a>
+      <p id="emptyResult" class="emptyResult">Your MP4 will appear here after you press <strong>Create Video</strong>.</p>
+    </section>
+
+    <footer class="foot">
+      <p class="privacy">Your image is processed in your browser and is not uploaded to a server.</p>
+      <p class="footNote">
+        The first video downloads the FFmpeg WebAssembly engine (about 32&nbsp;MB) from the unpkg CDN.
+        After that it is cached by your browser. Output: MP4 &middot; H.264 &middot; 1080&times;1920 &middot; 30&nbsp;fps &middot; no audio.
+      </p>
+    </footer>
+
+  </main>
+</body>
+</html>

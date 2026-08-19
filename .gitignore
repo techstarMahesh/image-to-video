@@ -1,0 +1,48 @@
+# This project needs no build step and no dependencies.
+# These entries just keep local junk out of the repository.
+
+# Node / tooling (only if you ever add a local dev server)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+.npm/
+
+# macOS / Windows / Linux desktop junk
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+Desktop.ini
+*~
+
+# Editors and IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# Test artifacts and local scratch files
+test-output/
+screenshots/
+*.log
+*.mp4
+test.jpeg
+test.jpg
+test.png
+test.webp
+
+# Local environment files (this app never needs any)
+.env
+.env.*
+
+# Internal working files, kept out of a public repo by default.
+# The app does not need either of them to run. Delete the matching line if you
+# actually do want it published.
+.claude/
+prd.md
