@@ -9,7 +9,7 @@ no build step and no npm install. Five files, copied into a GitHub repository, a
 
 ## 1. What the project does
 
-You pick one image (JPG, PNG or WEBP). You pick a length (15, 30 or 60 seconds).
+You pick one image (JPG, PNG or WEBP). You pick a length (30, 60 or 90 seconds).
 You press **Create Video**. The app encodes a real MP4 file in your browser and gives you a
 **Download MP4** button.
 
@@ -23,8 +23,8 @@ The output is built for WhatsApp Status:
 | Resolution | **1080 x 1920** (9:16 vertical) |
 | Frame rate | 30 fps, constant |
 | Audio | **none at all** (`-an`, zero audio tracks) |
-| Duration | exactly 15, 30 or 60 seconds |
-| Filename | `whatsapp-status-15s.mp4` / `-30s.mp4` / `-60s.mp4` |
+| Duration | exactly 30, 60 or 90 seconds |
+| Filename | `whatsapp-status-30s.mp4` / `-60s.mp4` / `-90s.mp4` |
 
 The photo is **never stretched**. It is scaled with its aspect ratio kept, then either padded
 with your chosen background colour (**Fit**) or centre-cropped (**Cover**).
@@ -37,7 +37,7 @@ with your chosen background colour (**Fit**) or centre-cropped (**Cover**).
 - Accepts JPG, JPEG, PNG and WEBP. Anything else gets a friendly error.
 - 20 MB size limit, with a clear message telling you the actual size of the file you picked.
 - Live image preview, and you can replace the image as many times as you like.
-- Duration selector: 15 / 30 / 60 seconds, default **60**.
+- Duration selector: 30 / 60 / 90 seconds, default **60**.
 - **Fit** or **Cover**, default Fit, plus a **background colour** picker (default black)
   used to fill the empty area in Fit mode.
 - Staged progress with a real percentage: `Loading video engine… 43%` →
@@ -122,20 +122,26 @@ container    MP4 (isom / iso2 / avc1 / mp41), moov before mdat -> faststart
 video track  avc1 / H.264 Baseline (profile_idc 66), Level 4.0, 1080 x 1920
 pixel format yuv420p, 8-bit (SPS chroma_format_idc 1)
 frame rate   30 fps constant (timescale 15360, sample delta 512)
-15 s file    450 frames,  duration 15.000 s, 599 KB
 30 s file    900 frames,  duration 30.000 s, 930 KB
 60 s file    1800 frames, duration 60.000 s, 1.9 MB
+90 s file    2700 frames, duration 90.000 s, 2.8 MB
 audio        0 audio tracks
 ```
 
 **Encode times measured on desktop Chrome** (headless, single-threaded core,
 excluding the one-off engine download):
 
-| Duration | Time |
-| --- | --- |
-| 15 s | ~20 s |
-| 30 s | ~23 s |
-| 60 s | ~46 s |
+| Duration | Time | Size |
+| --- | --- | --- |
+| 30 s | ~23 s | 0.9 MB |
+| 60 s | ~44 s | 1.9 MB |
+| 90 s | ~65 s | 2.8 MB |
+
+All three are real measurements from the same machine and the same source photo,
+taken with the engine already loaded. Encoding cost scales close to linearly with
+frame count (30 s = 900 frames, 60 s = 1800, 90 s = 2700), and so does file size.
+Peak memory is highest for 90 s, which is the option most likely to struggle on an
+older phone.
 
 A phone will be **substantially slower** than this - it has less memory, a slower
 CPU and no benefit from multiple cores here. Treat the numbers above as a
@@ -288,10 +294,10 @@ on the features the app needs, not a test result. Please treat the second column
 
 | Browser | Status |
 | --- | --- |
-| Desktop Chrome | **Tested.** All 3 durations verified end to end. Fastest. |
+| Desktop Chrome | **Tested.** 30 s and 60 s verified end to end; 90 s not yet measured. Fastest. |
 | Android Chrome | *Expected to work* - the main target, but **not tested on a real device**. Substantially slower than desktop. |
 | Edge (desktop and Android) | *Expected to work* (same engine as Chrome). Not tested. |
-| iPhone / iPad Safari 16.4+ | *Expected to work.* Not tested. Older iOS may run out of memory on 60 s. |
+| iPhone / iPad Safari 16.4+ | *Expected to work.* Not tested. Older iOS may run out of memory on 60 s or 90 s. |
 | Desktop Safari 16.4+ | *Expected to work.* Not tested. |
 | Firefox 79+ | *Expected to work.* Not tested. |
 | Any browser without WebAssembly or Web Workers | Blocked with a clear message. |
@@ -334,10 +340,12 @@ request list.
   after the cache is cleared. The first video on a mobile data connection is a real download.
 - **Encoding is single-threaded and therefore slow.** This is forced by GitHub Pages not being
   able to send the COOP/COEP headers a multi-threaded build needs (see section 4). A 60-second
-  video takes noticeably longer on a phone than on a desktop, which is why the app warns
+  video takes noticeably longer on a phone than on a desktop, and 90 seconds is half again as
+  much work, which is why the app warns
   "Video creation may take a little longer on mobile devices."
 - **RAM.** WebAssembly FFmpeg needs a few hundred MB. On an old or memory-starved phone a
-  60-second render can fail; the app catches this and suggests a smaller image or a shorter
+  60- or 90-second render can fail (90 s is the heaviest option); the app catches this and
+  suggests a smaller image or a shorter
   duration. Closing other tabs helps. If a render is killed outright by the browser, or simply
   runs past its time limit, the app gives up cleanly, throws the engine away and lets you try
   again - it will not sit there disabled forever.

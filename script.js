@@ -62,9 +62,9 @@ const imageInput = document.getElementById('imageInput');
 const dropZone = document.getElementById('dropZone');
 const preview = document.getElementById('preview');
 const fileInfo = document.getElementById('fileInfo');
-const dur15 = document.getElementById('dur15');
 const dur30 = document.getElementById('dur30');
 const dur60 = document.getElementById('dur60');
+const dur90 = document.getElementById('dur90');
 const fitMode = document.getElementById('fitMode');
 const bgColor = document.getElementById('bgColor');
 const createBtn = document.getElementById('createBtn');
@@ -130,8 +130,10 @@ function clearError() {
 }
 
 function selectedSeconds() {
-  if (dur15.checked) return 15;
   if (dur30.checked) return 30;
+  if (dur90.checked) return 90;
+  // 60 is both the default choice in index.html and the fallback if, somehow,
+  // no radio is checked at all.
   return 60;
 }
 
@@ -194,7 +196,7 @@ function resetOutput() {
 // Locks the settings while a render is in flight, so the video that comes out
 // always matches the settings that went in.
 function setControlsDisabled(disabled) {
-  [imageInput, dur15, dur30, dur60, fitMode, bgColor].forEach(function (el) {
+  [imageInput, dur30, dur60, dur90, fitMode, bgColor].forEach(function (el) {
     el.disabled = disabled;
   });
 }
@@ -278,7 +280,7 @@ dropZone.addEventListener('drop', function (event) {
   });
 });
 
-[dur15, dur30, dur60, fitMode, bgColor].forEach(function (el) {
+[dur30, dur60, dur90, fitMode, bgColor].forEach(function (el) {
   el.addEventListener('change', resetOutput);
 });
 
@@ -308,11 +310,13 @@ async function destroyFFmpeg() {
 
 /*
  * A ceiling on how long one encode may take before we give up.
- * Measured on desktop Chrome with this single-threaded core: 15 s of video takes
- * about 20 s, 60 s takes about 46 s. A slow phone can easily be several times
- * slower than that, and being cut off unfairly is much worse than waiting, so
- * this is deliberately generous: 5 minutes minimum, and 20 s of grace for every
- * 1 s of video (so 60 s of video gets 20 minutes).
+ * Measured on desktop Chrome with this single-threaded core: 30 s of video takes
+ * about 23 s, 60 s takes about 46 s. 90 s is not measured yet, but the cost is
+ * linear in frames, so expect roughly 70 s. A slow phone can easily be several
+ * times slower than that, and being cut off unfairly is much worse than waiting,
+ * so this is deliberately generous: 5 minutes minimum, and 20 s of grace for
+ * every 1 s of video (so 60 s of video gets 20 minutes and 90 s gets 30, which
+ * is still a sane ceiling - about 25x the measured desktop time).
  */
 function encodeTimeoutMs(seconds) {
   return Math.max(300000, seconds * 20000);
