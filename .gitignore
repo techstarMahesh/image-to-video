@@ -45,4 +45,4 @@ test.webp
 # The app does not need them to run. Delete the line below if you
 # actually do want them published.
 # (prd.md used to be listed here - it is now published on purpose.)
-.claude/
+# .claude/
